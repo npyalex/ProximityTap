@@ -44,6 +44,7 @@ uint8_t x_pos;
 uint8_t z_pos;
 
 int vibeStrength;
+int nullReading;
 void setup() {
 
   pinMode(vibePin, OUTPUT);
@@ -55,7 +56,7 @@ void setup() {
   Serial.println("-----------------------------------");
   Serial.println("SparkFun/GestureSense - I2C ZX Demo");
   Serial.println("-----------------------------------");
-  
+
   // Initialize ZX Sensor (configure I2C and read model ID)
   if ( zx_sensor.init() ) {
     Serial.println("ZX Sensor initialization complete");
@@ -100,6 +101,7 @@ void loop() {
   vibeStrength = map(z_pos, 240, 0, 0, 255);
   // If there is position data available, read and print it
   if ( zx_sensor.positionAvailable() ) {
+    nullReading = 0;
     x_pos = zx_sensor.readX();
     if ( x_pos != ZX_ERROR ) {
       Serial.print("X: ");
@@ -112,5 +114,11 @@ void loop() {
     }
   
   analogWrite(vibePin, vibeStrength);
+  }
+  if (!zx_sensor.positionAvailable() ){
+      nullReading++;
+  }
+  if (nullReading>=500){
+    analogWrite(vibePin, 0);
   }
 }
