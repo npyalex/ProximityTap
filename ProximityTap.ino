@@ -1,12 +1,17 @@
 /****************************************************************
-I2C_ZX_Demo.ino
+Proximity Wearable
+by Nick Alexander @ OCADU Digital Futures
+based on I2C_ZX_Demo.ino
 XYZ Interactive ZX Sensor
 Shawn Hymel @ SparkFun Electronics
-May 6, 2015
-https://github.com/sparkfun/SparkFun_ZX_Distance_and_Gesture_Sensor_Arduino_Library
 
-Tests the ZX sensor's ability to read ZX data over I2C. This demo
-configures the ZX sensor and periodically polls for Z-axis and X-axis data.
+Takes sensor readings along the Z and X axes
+Nudges the wearer to indicate proximity by vibrating
+
+Intended for a wearable that rests the vibe motors on the wearer's clavicle
+Sensor positioned on the back of the neck
+
+Tested with Arduino Uno
 
 Hardware Connections:
  
@@ -20,15 +25,6 @@ Hardware Connections:
 Resources:
 Include Wire.h and ZX_Sensor.h
 
-Development environment specifics:
-Written in Arduino 1.6.3
-Tested with a SparkFun RedBoard
-
-This code is beerware; if you see me (or any other SparkFun 
-employee) at the local, and you've found our code helpful, please
-buy us a round!
-
-Distributed as-is; no warranty is given.
 ****************************************************************/
 
 #include <Wire.h>
@@ -36,7 +32,9 @@ Distributed as-is; no warranty is given.
 
 // Constants
 const int ZX_ADDR = 0x10;  // ZX Sensor I2C address
-const int vibePin = 3; // vibration motor pin
+const int vibePinMid = 3; // vibration motor pins
+const int vibePinLeft = 5;
+const int vibePinRight = 6;
 
 // Global Variables
 ZX_Sensor zx_sensor = ZX_Sensor(ZX_ADDR);
@@ -47,7 +45,9 @@ int vibeStrength;
 int nullReading;
 void setup() {
 
-  pinMode(vibePin, OUTPUT);
+  pinMode(vibePinMid, OUTPUT);
+  pinMode(vibePinLeft, OUTPUT);
+  pinMode(vibePinRight,OUTPUT);
   uint8_t ver;
 
   // Initialize Serial port
@@ -98,27 +98,43 @@ void setup() {
 void loop() {
   // map the Z position of the sensor
   // to the PWM vibration of the motor
-  vibeStrength = map(z_pos, 240, 0, 0, 255);
   // If there is position data available, read and print it
   if ( zx_sensor.positionAvailable() ) {
     nullReading = 0;
-    x_pos = zx_sensor.readX();
+    x_pos = zx_sensor.readX(); // 240 is right and 1 is left
     if ( x_pos != ZX_ERROR ) {
       Serial.print("X: ");
       Serial.print(x_pos);
+    if (x_pos <=80){
+      analogWrite(vibePinLeft, vibeStrength);
+      } else {
+      analogWrite(vibePinLeft, 0);
+      }
+    if ((x_pos >=81)&&(x_pos <=160)){
+      analogWrite(vibePinMid, vibeStrength);
+      } else {
+      analogWrite(vibePinMid, 0);
+      }
+    if (x_pos >=161){
+      analogWrite(vibePinRight, vibeStrength);
+      } else {
+      analogWrite(vibePinRight, 0);
+      }
     }
     z_pos = zx_sensor.readZ();
     if ( z_pos != ZX_ERROR ) {
       Serial.print(" Z: ");
       Serial.println(z_pos);
+    vibeStrength = map(z_pos, 240, 0, 0, 255);
     }
-  
-  analogWrite(vibePin, vibeStrength);
+
   }
   if (!zx_sensor.positionAvailable() ){
       nullReading++;
   }
   if (nullReading>=500){
-    analogWrite(vibePin, 0);
+    analogWrite(vibePinMid, 0);
+    analogWrite(vibePinLeft, 0);
+    analogWrite(vibePinRight, 0);
   }
 }
